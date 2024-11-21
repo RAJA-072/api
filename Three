@@ -1,0 +1,199 @@
+Here's a simple HTML frontend to integrate with the Node.js backend for currency conversion. This frontend allows users to enter an amount, select currencies, and view the converted amount.
+
+HTML (frontend) code:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Currency Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+    }
+    label {
+      font-size: 16px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    select, input[type="number"], button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .result {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Currency Converter</h1>
+    <label for="amount">Amount</label>
+    <input type="number" id="amount" placeholder="Enter amount" required>
+
+    <label for="fromCurrency">From Currency</label>
+    <select id="fromCurrency">
+      <option value="USD">USD</option>
+      <option value="EUR">EUR</option>
+      <option value="INR">INR</option>
+      <option value="GBP">GBP</option>
+      <!-- Add more currencies as needed -->
+    </select>
+
+    <label for="toCurrency">To Currency</label>
+    <select id="toCurrency">
+      <option value="USD">USD</option>
+      <option value="EUR">EUR</option>
+      <option value="INR">INR</option>
+      <option value="GBP">GBP</option>
+      <!-- Add more currencies as needed -->
+    </select>
+
+    <button onclick="convertCurrency()">Convert</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    async function convertCurrency() {
+      const amount = document.getElementById('amount').value;
+      const fromCurrency = document.getElementById('fromCurrency').value;
+      const toCurrency = document.getElementById('toCurrency').value;
+
+      if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/convert?fromCurrency=${fromCurrency}&toCurrency=${toCurrency}&amount=${amount}`);
+        const data = await response.json();
+
+        if (data.error) {
+          document.getElementById('result').innerHTML = data.error;
+        } else {
+          document.getElementById('result').innerHTML = `${amount} ${fromCurrency} is equal to ${data.convertedAmount.toFixed(2)} ${toCurrency}`;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('result').innerHTML = 'An error occurred. Please try again.';
+      }
+    }
+  </script>
+</body>
+</html>
+
+Backend (Node.js) to support the frontend:
+
+The following code is the backend to process the frontend request and perform the conversion:
+
+const express = require('express');
+const axios = require('axios');
+const app = express();
+const port = 3000;
+
+app.use(express.static('public')); // To serve the HTML file
+app.use(express.json());
+
+// Function to get currency conversion
+async function getCurrencyConversion(fromCurrency, toCurrency, amount) {
+  const apiKey = 'YOUR_API_KEY'; // Replace with your API key
+  const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/${fromCurrency}`;
+
+  try {
+    const response = await axios.get(url);
+    const conversionRate = response.data.conversion_rates[toCurrency];
+
+    if (conversionRate) {
+      return amount * conversionRate;
+    } else {
+      throw new Error('Invalid target currency');
+    }
+  } catch (error) {
+    throw new Error('Error fetching currency conversion data');
+  }
+}
+
+// API endpoint to handle the conversion request
+app.get('/convert', async (req, res) => {
+  const { fromCurrency, toCurrency, amount } = req.query;
+
+  if (!fromCurrency || !toCurrency || !amount) {
+    return res.json({ error: 'Invalid request. Please provide valid currencies and amount.' });
+  }
+
+  try {
+    const convertedAmount = await getCurrencyConversion(fromCurrency, toCurrency, parseFloat(amount));
+    res.json({ convertedAmount });
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+});
+
+How to Run:
+
+1. Save the HTML code in a file (e.g., index.html) inside a public folder.
+
+
+2. Save the backend Node.js code in a file (e.g., server.js).
+
+
+3. Install the necessary dependencies (express, axios):
+
+npm install express axios
+
+
+4. Replace 'YOUR_API_KEY' with your actual API key from the currency API provider.
+
+
+5. Run the Node.js server:
+
+node server.js
+
+
+6. Open http://localhost:3000 in your browser to see the currency converter in action.
+
+
+
+Explanation:
+
+The frontend contains input fields for the amount and currency selection.
+
+The convertCurrency() function sends a request to the backend with the selected currencies and amount.
+
+The backend (/convert endpoint) fetches the conversion rate from the currency API and returns the converted amount.
+
+
